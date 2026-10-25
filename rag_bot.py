@@ -1464,6 +1464,18 @@ def local_contextual_response(chat_id: int, user_text: str, detected_lang: str) 
             and farewell_guard.conversation_active(chat_id, last_bot_msg)):
         return farewell_guard.mid_thanks_reply(detected_lang)
 
+    # BOSS 25/10 : réponse LIBRE (pas oui/non) à la question en
+    # attente (« C'est quoi ton business ? » -> « je vends des
+    # téléphones ») : le tunnel CONTINUE dans le sujet demandé — jamais
+    # de pitch parasite ni de « question non répondue ». AVANT le bloc
+    # secteur déclaré (sinon le pitch sectoriel prend le dessus).
+    if (_topic == "secteur" and not is_confirm_word and not _neg
+            and "?" not in user_text
+            and not service_followup.has_service_word(user_text)):
+        _ans = pending_question.answer_open(_topic, user_text)
+        if _ans:
+            return _ans
+
     # SECTEUR DÉCLARÉ (Boss 09/10, capture : « J'ai une boutique » ->
     # « Tu vends quoi exactement ? » alors qu'il vient de le dire). Si le
     # client déclare son activité, on NOMME le secteur et on pousse UNE
@@ -2504,7 +2516,9 @@ def _process_text(chat_id: int, user_text: str, detected_lang: str,
         return
 
     local_response = local_contextual_response(chat_id, user_text, detected_lang)
-    if local_response is None:
+    # BOSS 25/10 : un numéro de téléphone n'est pas une question sans
+    # réponse — la capture commande (section 6) s'en occupe.
+    if local_response is None and not re.search(r"\d{6,}", user_text):
         record_unrecognized(user_text, source="telegram")
         # Lot 20 : chaque question sans réponse part dans le Google Sheet
         # dédié (memory_sheets) ET est notifiée à l'admin.
@@ -2544,13 +2558,11 @@ def _process_text(chat_id: int, user_text: str, detected_lang: str,
     # ses infos (nom de page + numéro WhatsApp). On accuse réception, on
     # TRANSFÈRE TOUT à l'admin via son id — jamais de « question non
     # répondue » sur un numéro.
-    try:
-        _lastb = next((h.get("content", "") for h in reversed(context_for(chat_id))
-                       if h.get("role") == "assistant" and h.get("content")), "")
-    except Exception:
-        _lastb = ""
-    if (("Numéro WhatsApp où installer" in _lastb)
-            or ("Nom de ta page" in _lastb)) and re.search(r"\d{6,}", user_text):
+    # BOSS 25/10 (simplifié) : un message avec un numéro de téléphone
+    # (6+ chiffres) arrivé ici est une INFO DE CONTACT du client — les
+    # flux actifs (devis/rdv/commande) l'ont déjà géré plus tôt. On
+    # accuse réception et on transfère TOUT à l'admin.
+    if re.search(r"\d{6,}", user_text) and len(user_text) <= 300:
         remember(chat_id, "user", user_text)
         _ack_close = ("Reçu 5/5 ✅ Je transmets tout à l'équipe KOMARA : ils "
                       "te contactent sur ce numéro pour la démo en 24h. "

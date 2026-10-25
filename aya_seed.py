@@ -135,7 +135,11 @@ SEED_QR: list[tuple[list[str], str]] = [
      "Parfait ! Dernière étape : Envoie-moi : 1. Nom de ta page 2. Numéro "
      "WhatsApp où installer le bot 3. Logo si tu as. Dès que j'ai ça, je "
      "lance et tu paies après la démo, ok ?"),
-    (["ok je veux commander", "je veux commander", "ok commande"],
+    # BOSS 25/10 : « ok je veux commander » SEUL — les variantes
+    # « je veux commander » / « ok commande » existent déjà dans le
+    # Sheet du boss (fiches multi-variantes) et feraient SKIPPER toute
+    # la fiche au seed (le check any() annule la publication entière).
+    (["ok je veux commander"],
      "Génial ! On fait comme ça : Tu m'envoies ton nom + numéro WhatsApp "
      "business. Je te prépare la démo en 24h. Si tu valides la démo, tu "
      "payes. Sinon tu payes rien. Marché conclu ?"),

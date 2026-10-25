@@ -148,6 +148,15 @@ def asked_service(last_bot_msg: str) -> str:
     return ""
 
 
+def has_service_word(text: str) -> bool:
+    """True si le message contient un mot de service (bot, logo, site,
+    app, visuel) : c'est une NOUVELLE demande, pas une réponse libre à
+    la question en attente."""
+    import re as _re
+    return bool(_re.search(r"\b(bot|robot|logo|site|app|visuel|affiche|vid[eé]o)\b",
+                           (text or "").lower()))
+
+
 def reply_for(user_text: str, last_bot_msg: str) -> str | None:
     """Réponse cohérente à la réponse libre du client, ou None."""
     service = asked_service(last_bot_msg)

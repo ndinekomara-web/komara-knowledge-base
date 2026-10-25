@@ -1098,6 +1098,15 @@ def handle(bot, chat_id: int, text: str, lang: str) -> bool:
     # en égalité exacte), sinon la demande partait en réponse KB hors-sujet.
     _phrase_intent = re.search(r"\b(devis|commander|quote|presupuesto)\b", low)
     if _phrase_intent and not _fetch_flow(chat_id):
+        # BOSS 25/10 : même priorité qu'au point 2 — une FICHE ENSEIGNÉE
+        # EXACTE (« ok je veux commander ») n'est PAS une demande de
+        # catalogue : le RAG sert la connaissance du boss.
+        try:
+            import knowledge_store as _ks2
+            if _ks2.is_question_known(text_clean) or _ks2.is_question_known(low):
+                return False
+        except Exception:
+            pass
         _w = _phrase_intent.group(1)
         if _w in ("devis", "quote", "presupuesto"):
             return start_flow(bot, chat_id, "devis", lang, trigger_text=text_clean)

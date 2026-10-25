@@ -437,6 +437,16 @@ def handle(bot, chat_id: int, text: str, lang: str = "fr") -> bool:
     AVANT la KB. Ordre strict if/elif sur client_step."""
     try:
         low = text.strip().lower()
+        # BOSS 25/10 : une FICHE ENSEIGNÉE EXACTE prime sur l'état du
+        # tunnel (« ok je veux commander » = fiche du boss, pas le
+        # catalogue express). Les confirmations courtes (« oui », « ok »)
+        # ne sont pas des fiches : le pack les garde.
+        try:
+            import knowledge_store as _ks
+            if _ks.is_question_known(text.strip()) or _ks.is_question_known(low):
+                return False
+        except Exception:
+            pass
         step = cdb.get_step(chat_id)
 
         # F6 : réponse assurance (OUI ASSURANCE / NON) — prioritaire,
