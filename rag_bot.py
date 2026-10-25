@@ -61,7 +61,11 @@ TOKEN = (os.getenv("TELEGRAM_TOKEN") or "").strip()
 POLL_TIMEOUT = int(os.getenv("TELEGRAM_POLL_TIMEOUT", "30"))
 LONG_POLLING_TIMEOUT = int(os.getenv("TELEGRAM_LONG_POLLING_TIMEOUT", "30"))
 MAX_RETRIES = int(os.getenv("TELEGRAM_MAX_RETRIES", "8"))
-DROP_PENDING_UPDATES = os.getenv("TELEGRAM_DROP_PENDING_UPDATES", "true").lower() in {"1", "true", "yes", "on"}
+# P1 (Boss 25/10) : les messages en attente pendant un redéploiement sont
+# PRÉSERVÉS par défaut — plus aucune perte silencieuse de messages clients.
+# Suppression UNIQUEMENT sur décision explicite de l'admin :
+# TELEGRAM_DROP_PENDING_UPDATES=1 dans les variables Railway.
+DROP_PENDING_UPDATES = os.getenv("TELEGRAM_DROP_PENDING_UPDATES", "false").lower() in {"1", "true", "yes", "on"}
 
 MONITOR_API_URL = (os.getenv("MONITOR_API_URL") or "").strip().rstrip("/")
 MONITOR_API_KEY = (os.getenv("MONITOR_API_KEY") or os.getenv("KOMARA_API_KEY") or "").strip()
@@ -692,9 +696,22 @@ def init_memory_db() -> None:
         DB_CONN.execute("""
             CREATE TABLE IF NOT EXISTS processed_events (
                 event_key TEXT PRIMARY KEY,
-                ts REAL NOT NULL
+                ts REAL NOT NULL,
+                state TEXT
             )
         """)
+        # P1 (Boss 25/10) : migration douce des bases existantes (colonne
+        # state absente sur les déploiements antérieurs).
+        try:
+            DB_CONN.execute(
+                "ALTER TABLE processed_events ADD COLUMN state TEXT")
+        except sqlite3.OperationalError:
+            pass  # colonne déjà là
+        # Les lignes écrites par l'ancien anti-doublon l'étaient à la
+        # livraison complète -> elles sont « done ».
+        DB_CONN.execute(
+            "UPDATE processed_events SET state = 'done' "
+            "WHERE state IS NULL OR state = ''")
         DB_CONN.commit()
     logger.info("Cache mémoire éphémère initialisé : %s", MEMORY_FILE)
     threading.Thread(target=_hydrate_memory_from_sheets,
@@ -745,12 +762,27 @@ def _mark_processed_or_duplicate(event_key: str) -> bool:
     with DB_LOCK:
         try:
             row = DB_CONN.execute(
-                "SELECT 1 FROM processed_events WHERE event_key = ?", (event_key,)
+                "SELECT state FROM processed_events WHERE event_key = ?",
+                (event_key,)
             ).fetchone()
             if row:
-                return True
+                _state = (row[0] or "").strip()
+                # P1 (Boss 25/10) : seuls « done » (livré) et « processing »
+                # (en cours dans un autre thread/process) sont des
+                # doublons. « failed » (crash pendant le traitement) est
+                # RETENTÉ : le client ne perd jamais sa réponse.
+                if _state in ("done", "processing"):
+                    return True
+                DB_CONN.execute(
+                    "UPDATE processed_events SET state = 'processing', ts = ? "
+                    "WHERE event_key = ?", (now, event_key))
+                DB_CONN.commit()
+                return False
+            # Nouvel événement : reçu -> directement « processing » (la
+            # fenêtre de réception est instantanée dans un même process).
             DB_CONN.execute(
-                "INSERT INTO processed_events (event_key, ts) VALUES (?, ?)",
+                "INSERT INTO processed_events (event_key, ts, state) "
+                "VALUES (?, ?, 'processing')",
                 (event_key, now),
             )
             # Purge légère (≈1% des appels) : on ne garde que 48h d'historique
@@ -764,6 +796,27 @@ def _mark_processed_or_duplicate(event_key: str) -> bool:
             # → c'est bien un doublon.
             return True
     return False
+
+
+def _finish_processed(event_key: str, ok: bool) -> None:
+    """P1 (Boss 25/10) : clôture le cycle d'état de l'anti-doublon durable.
+    ok=True -> « done » (livré, jamais retraité) ; ok=False -> « failed »
+    (crash pendant le traitement : retenté si l'événement revient).
+    NB : réduit pertes ET doublons, mais ne garantit pas à lui seul une
+    livraison exactly-once (durabilité inter-redéploiements = volume
+    Railway, voir MEMORY_DIR)."""
+    global DB_CONN
+    if DB_CONN is None:
+        return
+    with DB_LOCK:
+        try:
+            DB_CONN.execute(
+                "UPDATE processed_events SET state = ? WHERE event_key = ?",
+                ("done" if ok else "failed", event_key),
+            )
+            DB_CONN.commit()
+        except sqlite3.Error:
+            logger.exception("Clôture anti-doublon impossible : %s", event_key)
 
 def has_prior_history(chat_id: int) -> bool:
     """True si ce chat a déjà un historique en base (client REVENANT).
@@ -1989,8 +2042,11 @@ def handle_message(message: telebot.types.Message) -> None:
         logger.warning("Doublon ignoré (anti-double-envoi) : %s", _event_key)
         return
     try:
-        return _handle_message(message)
+        _r = _handle_message(message)
+        _finish_processed(_event_key, ok=True)
+        return _r
     except Exception as e:  # filet de sécurité absolu
+        _finish_processed(_event_key, ok=False)
         logger.error("CRASH géré dans handle_message : %s", e, exc_info=True)
         try:
             chat_id = message.chat.id
@@ -2019,11 +2075,15 @@ def handle_callback_query(call: telebot.types.CallbackQuery) -> None:
             pass
         return
     lang = _LAST_LANG.get(chat_id, "fr") if chat_id else "fr"
+    _cb_key = f"cb:{call.id}"
     try:
         if img_gen.handle_callback(bot, call, lang):
+            _finish_processed(_cb_key, ok=True)
             return
         catalogue.handle_callback(bot, call, lang)
+        _finish_processed(_cb_key, ok=True)
     except Exception as e:
+        _finish_processed(_cb_key, ok=False)
         logger.error("CRASH géré dans handle_callback_query : %s", e, exc_info=True)
         try:
             bot.answer_callback_query(call.id, "⚠️ " + msg(lang, "crash_fallback")[:180])
