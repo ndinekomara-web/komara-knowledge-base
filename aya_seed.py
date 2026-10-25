@@ -85,6 +85,36 @@ SEED_QR: list[tuple[list[str], str]] = [
      "Une affiche pro chez Komara Agency 🇬🇳 c'est {AFFICHE}, livrée en 24h en HD, prête pour Facebook, WhatsApp et l'impression 🎨 Tu me dis juste ton activité et le message à afficher, on s'occupe du reste. On prépare la tienne ? (Oui / Non)".format(**PRICES)),
     (["c'est quoi une automatisation", "qu'est-ce qu'une automatisation", "automatisation c'est quoi", "explique automatisation"],
      "Une automatisation ⚙️ c'est une tâche qui se fait toute seule pendant que tu dors : le client paie, il reçoit sa facture auto. Quelqu'un commente, le bot répond. Un lead arrive, il est enregistré et relancé 🤖 Toi tu gères ton business, la machine fait le reste. Je te montre un exemple concret pour ton activité ? (Oui / Non)"),
+    # DIALOGUES RECONNECT (Boss 25/10) : le client qui REVIENT se sent
+    # reconnu, et la réponse ouvre TOUJOURS vers la suite commerciale —
+    # le tunnel vente/RDV/close prend le relais dès la réponse du client.
+    (["salam aya", "salam aya !!", "salam aya !"],
+     "Wa alaykoum salam ! Ça fait plaisir de te revoir 😊 Comment va ton "
+     "business ? Toujours au top ?"),
+    (["tu me connais", "est-ce que tu me connais", "tu me connais ?"],
+     "Bien sûr que je te connais ! Tu es un de nos meilleurs clients. "
+     "Comment je peux t'aider aujourd'hui ?"),
+    (["ça fait longtemps", "ca fait longtemps", "ça fait longtemps !"],
+     "Oui ça fait longtemps ! Tu m'as manqué. Quoi de neuf chez toi ? "
+     "Toujours besoin d'un coup de main ?"),
+    (["je suis de retour", "me revoilà", "me revoila"],
+     "De retour ! Ça fait trop plaisir. Bienvenue à la maison chez KOMARA. "
+     "On reprend où on s'était arrêté ?"),
+    (["tu te souviens de moi", "tu te souviens", "est-ce que tu te souviens de moi"],
+     "Comment t'oublier ! Bien sûr que je me souviens. C'est quoi ton "
+     "projet du moment ?"),
+    (["mon frère", "mon frere", "hey mon frère"],
+     "Oui mon frère ! Dis-moi tout, qu'est-ce qu'on fait aujourd'hui pour "
+     "toi ? Tu as besoin de quoi ?"),
+    (["j'ai encore besoin de toi", "j ai encore besoin de toi"],
+     "Toujours là pour toi mon frère. Tu sais que pour les anciens clients "
+     "on fait un prix spécial. Dis-moi ce que tu veux."),
+    (["prix pour moi", "c'est combien pour moi"],
+     "Pour toi c'est prix famille, tu le sais. Dis-moi c'est pour quoi "
+     "exactement et je te fais une super offre."),
+    (["tu m'as oublié", "tu m as oublie", "tu m'a oublié"],
+     "T'oublier ? Jamais ! Impossible. Tu es dans la famille KOMARA "
+     "maintenant. Alors, on fait quoi aujourd'hui ?"),
     # OBJECTIONS CLOSER 14/10 : défendre le prix sans casser,
     # puis ramener vers la vente (fin Oui/Non).
     (["c'est trop cher", "trop cher", "c est trop cher", "c'est trop chère",

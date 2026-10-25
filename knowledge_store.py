@@ -186,6 +186,25 @@ _STOP_TOKENS = {
 }
 
 
+# BOSS 25/10 (screen 18:24) : « c'est combien le logo » était écrasé par
+# « comment faire un logo » car « combien »/« comment »/« faire » sont des
+# mots-outils → les deux questions se réduisaient à {logo} = « similaires ».
+# Un mot d'INTENTION fait toute la différence de sens :
+_INTENT_WORDS = {
+    "combien", "prix", "tarif", "tarifs", "cout", "coute", "cher", "chere",
+    "gratuit", "gratuite",     # INTENTION PRIX
+    "comment", "creer", "fabriquer", "construire", "methode",  # MÉTHODE
+    "livraison", "livrer", "livrez", "livre", "delai", "expedier",  # LIVRAISON
+}
+
+
+def _intent_tokens(text_norm: str) -> set:
+    """Mots d'intention présents (mêmes mots que _STOP_TOKENS, mais ils
+    PORTENT la différence de sens entre deux questions)."""
+    return {w for w in re.findall(r"\b\w{3,}\b", text_norm)
+            if w in _INTENT_WORDS}
+
+
 def _content_tokens(text_norm: str) -> set:
     """Tokens porteurs de sens (mots-outils retirés)."""
     return {w for w in re.findall(r"\b\w{3,}\b", text_norm)
@@ -258,6 +277,12 @@ def _questions_similar(q1: str, q2: str) -> bool:
         return False
     if a == b:
         return True
+    # Garde d'intention (Boss 25/10) : « c'est COMBIEN le logo » (prix)
+    # et « COMMENT faire un logo » (méthode) ne sont JAMAIS similaires,
+    # même si tous leurs autres mots porteurs sont identiques.
+    ia, ib = _intent_tokens(a), _intent_tokens(b)
+    if ia != ib:
+        return False
     ta, tb = _content_tokens(a), _content_tokens(b)
     if not ta or not tb:
         return False

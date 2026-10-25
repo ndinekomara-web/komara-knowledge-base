@@ -177,10 +177,15 @@ def step5_pre_entrainement(model: dict[str, Any],
 VALIDATION_SET: list[tuple[str, str]] = [
     ("salut", "Aya"),
     ("qui es-tu ?", "Aya"),
-    ("c'est combien le logo", "50 €|50€"),  # tarifs Boss 07/10 : logo 50 €, pack resto 120 €
+    # Boss 25/10 : le boss enseigne « à partir de 30 € » (fiches du
+    # 25/10) ; 50 € reste la valeur seed. Les deux prix passent.
+    ("c'est combien le logo", "30 €|30€|50 €|50€"),
     ("quel est le prix d'une affiche", "300"),
     ("c'est quoi un chatbot", "vendeur"),
-    ("c'est quoi une automatisation", "machine"),
+    # Boss 25/10 : la nouvelle fiche du boss parle de « WhatsApp qui
+    # travaille tout seul » ; les anciennes disaient « machine »/« toute
+    # seule ». L'intention = une définition claire.
+    ("c'est quoi une automatisation", "machine|toute seule|tout seul|travaille"),
     ("je veux en savoir plus sur vos agents IA", "agents IA personnalisés"),
     ("comment ça marche un chatbot pour mon site web ?", "spécifications"),
     ("quels sont vos tarifs pour un chatbot ?", "devis personnalisé"),

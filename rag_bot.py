@@ -842,23 +842,22 @@ def context_for(chat_id: int) -> list[dict[str, str]]:
 # ---------------------------------------------------------------------------
 
 def trouver_meilleure_reponse_multilingue(message: str, detected_lang: str) -> str | None:
+    # COHÉRENCE (Boss 25/10) : l'ENSEIGNEMENT EXACT passe AVANT TOUT —
+    # avant même le fuzzy de la langue détectée. « Salam aya » détecté
+    # darija->ar ne doit JAMAIS retomber sur la fiche arabe « salam » :
+    # la fiche EXACTE du boss (fr) est servie telle quelle. Le fuzzy,
+    # lui, reste strictement dans la langue détectée (anti-mélange
+    # 10/10 : pas de réponse APPROCHÉE dans une autre langue).
+    _exact = _exact_match_crosslang(message)
+    if _exact:
+        return _exact
+
     resources = LANG_RESOURCES.get(detected_lang, {"kb": [], "faq": [], "dialogues": []})
     result = trouver_meilleure_reponse(
         message, resources["kb"], resources["faq"], resources["dialogues"]
     )
     if result:
         return result
-
-    # COHÉRENCE (Boss 19/10) : le FUZZY reste strictement dans la langue
-    # détectée (règle anti-mélange 10/10 : pas de réponse APPROCHÉE dans
-    # une autre langue). MAIS un ENSEIGNEMENT EXACT ne connaît pas de
-    # frontière : si le boss a appris « salam boss » (fr), un client qui
-    # tape « salam boss » reçoit CETTE fiche — même si la détection a
-    # basculé en arabe (darija). C'est la base réelle du Sheet qui parle,
-    # pas une invention.
-    _exact = _exact_match_crosslang(message)
-    if _exact:
-        return _exact
 
     return None
 
