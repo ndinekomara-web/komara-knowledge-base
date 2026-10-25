@@ -1067,6 +1067,17 @@ def handle(bot, chat_id: int, text: str, lang: str) -> bool:
     # 2. Démarrage d'un flux (déclencheurs / boutons)
     for flow, words in TRIGGERS.items():
         if text_clean in words or low in words:
+            # BOSS 25/10 : une FICHE ENSEIGNÉE EXACTE prime sur le
+            # déclencheur (« ok je veux commander » = fiche tunnel du
+            # boss, PAS l'ouverture du catalogue express). Le RAG en
+            # aval servira la connaissance du boss.
+            try:
+                import knowledge_store as _ks
+                if (_ks.is_question_known(text_clean)
+                        or _ks.is_question_known(low)):
+                    return False
+            except Exception:
+                pass
             # (égalité exacte ci-dessus, contenu ci-dessous)
             # Panier non vide → tunnel catalogue au lieu du flux commande
             if flow == "parrainage":

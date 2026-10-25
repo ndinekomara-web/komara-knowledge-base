@@ -152,20 +152,38 @@ def handle_receipt_scan(bot, chat_id: int, image_path: str,
                 return True
         except Exception as e:
             logger.error("Transfert capture : %s", e)
+        # BOSS 25/10 : un client qui envoie une photo SANS QR n'est pas
+        # (forcément) en train de payer — souvent il montre un logo à
+        # reproduire ou une image à retoucher. Message orienté IMAGE (le
+        # vrai chemin : renvoyer la photo AVEC la demande en légende),
+        # et la photo part à l'admin pour ne rien perdre.
         msg = {
-            "fr": "Merci pour la photo Chef 📸 Mais je n'arrive pas à lire de QR "
-                  "dessus. Envoie le reçu avec le QR visible, ou tape 'payer' "
-                  "pour recevoir notre QR de paiement 🙏",
-            "en": "Thanks for the photo boss 📸 But I can't read a QR on it. "
-                  "Send the receipt with the QR visible, or type 'pay' to get "
-                  "our payment QR 🙏",
-            "es": "Gracias por la foto jefe 📸 Pero no puedo leer un QR en ella. "
-                  "Envíe el recibo con el QR visible, o escriba 'pagar' para "
-                  "recibir nuestro QR de pago 🙏",
-            "ar": "شكراً على الصورة زعيم 📸 لكن لا أستطيع قراءة رمز QR فيها. "
-                  "أرسل الإيصال مع رمز QR ظاهراً، أو اكتب 'دفع' لاستلام رمز الدفع 🙏",
+            "fr": "J'ai bien reçu ta photo 📸 Pour que je la reproduise à "
+                  "l'identique, crée un logo à partir d'elle ou la retouche, "
+                  "renvoie-la AVEC ta demande écrite en légende (exemple : "
+                  "« reproduis ce logo en doré ») et je m'y mets tout de "
+                  "suite 👇",
+            "en": "Got your photo 📸 For me to copy it, create a logo from it "
+                  "or retouch it, send it again WITH your request as caption "
+                  '(e.g. "copy this logo in gold") and I get right on it 👇',
+            "es": "Recibí tu foto 📸 Para copiarla, crear un logo a partir de "
+                  "ella o retocarla, envíala de nuevo CON tu pedido como "
+                  "leyenda (ej: « copia este logo en dorado ») y me pongo "
+                  "ahora mismo 👇",
+            "ar": "وصلتني صورتك 📸 لنسخها أو إنشاء شعار منها أو تعديلها، "
+                  "أرسلها مرة أخرى مع طلبك مكتوباً في الوصف (مثال: « انسخ "
+                  "هذا الشعار بالذهبي ») وسأبدأ فوراً 👇",
         }.get(lang, "fr")
         bot.send_message(chat_id, msg)
+        # Copie à l'admin : le boss voit ce que le client a envoyé.
+        try:
+            import actions as _a
+            if _a.ADMIN_CHAT_ID and chat_id != _a.ADMIN_CHAT_ID:
+                bot.send_message(_a.ADMIN_CHAT_ID,
+                                 f"📷 Photo client {chat_id} SANS légende — "
+                                 f"probable visuel à reproduire. /prend {chat_id}")
+        except Exception:
+            logger.exception("Copie photo admin impossible")
         return True
 
     tx_id, amount = extract_transaction_id(text)

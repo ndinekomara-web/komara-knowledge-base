@@ -85,6 +85,65 @@ SEED_QR: list[tuple[list[str], str]] = [
      "Une affiche pro chez Komara Agency 🇬🇳 c'est {AFFICHE}, livrée en 24h en HD, prête pour Facebook, WhatsApp et l'impression 🎨 Tu me dis juste ton activité et le message à afficher, on s'occupe du reste. On prépare la tienne ? (Oui / Non)".format(**PRICES)),
     (["c'est quoi une automatisation", "qu'est-ce qu'une automatisation", "automatisation c'est quoi", "explique automatisation"],
      "Une automatisation ⚙️ c'est une tâche qui se fait toute seule pendant que tu dors : le client paie, il reçoit sa facture auto. Quelqu'un commente, le bot répond. Un lead arrive, il est enregistré et relancé 🤖 Toi tu gères ton business, la machine fait le reste. Je te montre un exemple concret pour ton activité ? (Oui / Non)"),
+    # TUNNEL VENTE BOT (Boss 25/10) : accroche > qualification >
+    # collecte > prix (catalogue : Chatbot IA Vendeur 100 €, prix
+    # barré 200 €) > closing. TOUTES les réponses finissent par une
+    # question : le bot reste dans le contexte, la réponse du client
+    # continue le tunnel. La commande remonte à l'admin (hook closing).
+    (["tu peux me créer un logo maintenant", "tu peux me faire un logo maintenant"],
+     "Je ne peux pas le créer directement maintenant, mais je peux lancer "
+     "la création tout de suite ! Donne-moi : 1. Le nom de ton business "
+     "2. Ton activité 3. Tes couleurs préférées. Et mon équipe te "
+     "l'envoie en 24h. On commence ?"),
+    (["crée moi un logo", "cree moi un logo", "crée-moi un logo"],
+     "Parfait, je m'en occupe ! Pour créer ton logo, j'ai besoin de 3 infos "
+     "rapides : C'est quoi le nom ? Tu fais quoi comme activité ? Tu aimes "
+     "quel style ? Envoie ça et on commence tout de suite, ok ?"),
+    (["tu peux créer un bot", "tu peux faire un bot", "tu sais créer un bot"],
+     "Oui je lance la création ! Mais j'ai besoin de savoir : Ton business "
+     "c'est quoi ? C'est quoi les questions que tes clients posent le plus ? "
+     "Donne-moi ça et je crée ton bot en 24h. On y va ?"),
+    (["fais moi ça maintenant", "fais-le maintenant", "genere maintenant"],
+     "Je ne génère pas auto pour garder la qualité pro. Mais si tu me donnes "
+     "les infos maintenant, l'équipe KOMARA te livre en 24h max. C'est quoi "
+     "ton projet ?"),
+    (["je veux un bot", "je veux un robot", "j'ai besoin d'un bot"],
+     "Parfait 🔥 Tu veux un bot qui travaille à ta place 24h/24. J'ai juste "
+     "besoin de 2 minutes pour te qualifier et on lance. C'est quoi ton "
+     "business ?"),
+    (["je veux une ia", "je veux une intelligence artificielle", "je veux un agent ia"],
+     "Super, tu es au bon endroit. On crée des bots IA pour WhatsApp qui "
+     "vendent à ta place. Dis-moi : tu vends quoi exactement ?"),
+    (["mon business c'est", "mon business c'est quoi"],
+     "Top ! Et c'est quoi le plus gros problème que tu as avec tes clients "
+     "sur WhatsApp actuellement ? Ils te posent quoi comme questions ?"),
+    (["c'est quoi ton business", "pourquoi tu demandes mon business"],
+     "Je te demande ça pour configurer ton bot pile pour ton activité. "
+     "Alors tu fais quoi ? Vente de produits ? Service ? Restaurant ?"),
+    (["quelles questions", "quelles questions posent mes clients"],
+     "Parfait, je note. Maintenant j'ai besoin de : 1. Les 3 questions que "
+     "tes clients posent tout le temps 2. Ton adresse ou ville 3. Tes prix "
+     "principaux. Tu peux me donner ça ?"),
+    (["je veux que le bot réponde à", "je veux que le bot réponde"],
+     "Excellent, je note tout. Et tu veux que le bot fasse quoi d'autre ? "
+     "Prendre les commandes ? Envoyer la localisation ? Faire des relances ?"),
+    (["prix bot", "prix du bot", "combien le bot"],
+     "C'est 100 € au lieu de 200 € cette semaine. Offre spéciale. Le bot se "
+     "rentabilise en 2-3 jours car tu ne rates plus de clients la nuit. Je "
+     "te lance la commande ?"),
+    (["oui lance", "oui lances", "ok lance"],
+     "Parfait ! Dernière étape : Envoie-moi : 1. Nom de ta page 2. Numéro "
+     "WhatsApp où installer le bot 3. Logo si tu as. Dès que j'ai ça, je "
+     "lance et tu paies après la démo, ok ?"),
+    (["ok je veux commander", "je veux commander", "ok commande"],
+     "Génial ! On fait comme ça : Tu m'envoies ton nom + numéro WhatsApp "
+     "business. Je te prépare la démo en 24h. Si tu valides la démo, tu "
+     "payes. Sinon tu payes rien. Marché conclu ?"),
+    (["c'est combien un bot complet", "c'est combien le bot complet"],
+     "Pour un bot complet comme tu veux : 100 € une seule fois, pas "
+     "d'abonnement. Inclus : Installation + 200 phrases d'entraînement + "
+     "support 7 jours. On te le livre en 24h avec démo. Tu veux qu'on le "
+     "lance ?"),
     # DIALOGUES RECONNECT (Boss 25/10) : le client qui REVIENT se sent
     # reconnu, et la réponse ouvre TOUJOURS vers la suite commerciale —
     # le tunnel vente/RDV/close prend le relais dès la réponse du client.
@@ -125,12 +184,12 @@ SEED_QR: list[tuple[list[str], str]] = [
      "Un seul visuel bien fait te ramène des clients des mois entiers. On peut "
      "commencer petit et évoluer ensuite. Je te montre ce que 50 € fait pour "
      "ton image ? (Oui / Non)"),
+    # Boss 25/10 : version tunnel du boss (perte clients nuit + démo gratuite)
     (["je vais réfléchir", "je vais y réfléchir", "laisse moi réfléchir",
       "je vais penser", "let me think", "lo voy a pensar", "سأفكر"],
-     "Pas de souci, réfléchis tranquille 🤔 Par contre les créneaux de "
-     "livraison partent vite (24h seulement pour les logos). Si je te bloque "
-     "une place aujourd'hui, tu ne perds rien : devis gratuit, tu décides "
-     "après. Je te réserve ta place ? (Oui / Non)"),
+     "Je comprends, c'est une décision importante. Mais pense à ça : chaque "
+     "jour sans bot, tu perds 5-10 clients qui t'écrivent la nuit. On te "
+     "fait la démo gratuite, tu risques rien. On tente ? (Oui / Non)"),
     (["j'ai déjà un graphiste", "j ai deja un graphiste", "j'ai déjà un prestataire",
       "j ai un graphiste", "i already have a designer", "ya tengo un diseñador"],
      "Super, ça veut dire que tu prends ton image au sérieux 💪 Regarde juste "

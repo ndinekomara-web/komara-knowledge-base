@@ -1438,9 +1438,12 @@ def local_contextual_response(chat_id: int, user_text: str, detected_lang: str) 
             if _taught and _taught.strip() != last_bot_msg.strip():
                 return _taught
         # b) sujet de la question en attente identifié -> réponse sur CE sujet
+        # Boss 25/10 : réponse OUVERTE (ex. activité) -> le tunnel continue
+        # au lieu d'un « question non répondue ».
         if _topic:
             _ans = (pending_question.answer_no(_topic) if _neg
-                    else pending_question.answer_yes(_topic))
+                    else (pending_question.answer_yes(_topic)
+                          or pending_question.answer_open(_topic, user_text)))
             if _ans:
                 return _ans
         # c) aucune question identifiable : fiche liée au contexte, sinon
@@ -2536,6 +2539,49 @@ def _process_text(chat_id: int, user_text: str, detected_lang: str,
         response = random.choice(FALLBACK_VARIANTS_FR)
     else:
         response = msg(detected_lang, "fallback")
+
+    # CAPTURE COMMANDE (Boss 25/10) : après le closing, le client envoie
+    # ses infos (nom de page + numéro WhatsApp). On accuse réception, on
+    # TRANSFÈRE TOUT à l'admin via son id — jamais de « question non
+    # répondue » sur un numéro.
+    try:
+        _lastb = next((h.get("content", "") for h in reversed(context_for(chat_id))
+                       if h.get("role") == "assistant" and h.get("content")), "")
+    except Exception:
+        _lastb = ""
+    if (("Numéro WhatsApp où installer" in _lastb)
+            or ("Nom de ta page" in _lastb)) and re.search(r"\d{6,}", user_text):
+        remember(chat_id, "user", user_text)
+        _ack_close = ("Reçu 5/5 ✅ Je transmets tout à l'équipe KOMARA : ils "
+                      "te contactent sur ce numéro pour la démo en 24h. "
+                      "Prépare ton logo si tu en as un 🚀")
+        remember(chat_id, "assistant", _ack_close)
+        bot.send_message(chat_id, _ack_close,
+                         reply_markup=menu_for_lang(detected_lang))
+        try:
+            if actions.ADMIN_CHAT_ID:
+                bot.send_message(
+                    actions.ADMIN_CHAT_ID,
+                    f"📦 INFOS COMMANDE — chat {chat_id} :\n{user_text[:300]}\n"
+                    f"👉 /prend {chat_id}")
+        except Exception:
+            logger.exception("Transfert infos commande impossible")
+        return
+
+    # TRANSFERT ADMIN (Boss 25/10) : « oui lance » / « ok je veux
+    # commander » = le client passe à l'acte -> l'admin est prévenu
+    # immédiatement avec la prise en main directe (/prend).
+    _closing = user_text.strip().casefold()
+    if _closing in {"oui lance", "oui lances", "ok lance", "ok je veux commander",
+                    "je veux commander", "ok commande"}:
+        try:
+            if actions.ADMIN_CHAT_ID:
+                bot.send_message(
+                    actions.ADMIN_CHAT_ID,
+                    f"🔔 CLOSING DÉTECTÉ — chat {chat_id} : « {user_text[:80]} »\n"
+                    f"👉 Prends la main : /prend {chat_id}")
+        except Exception:
+            logger.exception("Transfert admin closing impossible")
 
     # 6. Sauvegarde et envoi
     remember(chat_id, "assistant", response)

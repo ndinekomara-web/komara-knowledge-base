@@ -148,6 +148,17 @@ def answer_no(topic: str) -> str | None:
     return _NO_ANSWER if topic else None
 
 
+def answer_open(topic: str, text: str) -> str | None:
+    """Réponse OUVERTE du client (pas oui/non) à la question en attente.
+    Boss 25/10 : « C'est quoi ton business ? » -> « je vends des
+    téléphones » -> le tunnel CONTINUE (étape 3 : questions clients),
+    jamais un « question non répondue »."""
+    if topic == "secteur":
+        return ("Top, noté ! Et c'est quoi le plus gros problème avec tes "
+                "clients sur WhatsApp ? Ils te posent quoi comme questions ?")
+    return None
+
+
 def answer_number(topic: str, index: int) -> str | None:
     """Réponse à un chiffre nu pour le sujet en attente (menu bot)."""
     if topic == "menu_bot":
