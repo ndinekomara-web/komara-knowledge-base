@@ -51,12 +51,20 @@ def init_catalogue_db(conn: sqlite3.Connection) -> None:
         n = conn.execute("SELECT COUNT(*) FROM products").fetchone()[0]
         if n == 0:
             now = _now()
-            conn.executemany(
-                "INSERT INTO products (category, name, description, price, active, created_at)"
-                " VALUES (?,?,?,?,1,?)",
-                [(cat, name, desc, price, now) for cat, name, desc, price in OFFICIAL_SERVICES_2026],
-            )
-            conn.commit()
+            try:
+                # BOSS 26/10 (crash 22:42) : le seed ne doit JAMAIS tuer le
+                # worker au démarrage — une table vide se re-seed au boot
+                # suivant, un worker mort ne répond plus à personne.
+                conn.executemany(
+                    "INSERT INTO products (category, name, description, price, active, created_at)"
+                    " VALUES (?,?,?,?,1,?)",
+                    [(cat, name, desc, price, now) for cat, name, desc, price in OFFICIAL_SERVICES_2026],
+                )
+                conn.commit()
+            except Exception:
+                import logging
+                logging.getLogger(__name__).exception(
+                    "Seed produits impossible (non fatal, re-tenté au prochain boot)")
         _migrate_official_prices_2026(conn)
         _migrate_official_prices_2027_bots(conn)
 

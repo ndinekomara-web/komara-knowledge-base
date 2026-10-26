@@ -62,9 +62,11 @@ def _to_pg(sql: str, params: tuple) -> str:
         head += f" ON CONFLICT ({','.join(pks)}) DO UPDATE SET " + ", ".join(
             f"{c} = EXCLUDED.{c}" for c in _cols_of(sql))
         sql = head
-    # placeholders ? -> %s (aucun « ? » littéral dans nos requêtes)
-    if params:
-        sql = sql.replace("?", "%s")
+    # PLACEHOLDERS : conversion TOUJOURS sous PG. CRASH Railway 26/10
+    # 22:42 : executemany passait params=() -> les « ? » restaient en
+    # l'état -> « syntax error at or near "," » et worker Crashed.
+    # Aucun « ? » littéral n'existe dans nos requêtes (vérifié).
+    sql = sql.replace("?", "%s")
     return sql
 
 

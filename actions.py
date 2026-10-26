@@ -3393,4 +3393,10 @@ def start_background(bot) -> None:
     logger.info("Boucle de rappels démarrée (intervalle %ss)", FOLLOWUP_LOOP_INTERVAL)
 
 
-init_db()
+try:
+    init_db()
+except Exception:  # BOSS 26/10 : un échec d'init ne doit JAMAIS tuer le
+    # worker à l'import (crash Railway 22:42) — les tables se créent au
+    # boot suivant ; un worker mort ne répond plus à personne.
+    import logging as _logging
+    _logging.getLogger(__name__).critical("init_db a échoué (non fatal)", exc_info=True)
