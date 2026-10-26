@@ -510,7 +510,10 @@ WHATSAPP_FALLBACK = os.getenv("AGENCY_WHATSAPP", "+212701986219")
 def init_db() -> None:
     global DB_CONN
     ACTIONS_DIR.mkdir(parents=True, exist_ok=True)
-    DB_CONN = sqlite3.connect(ACTIONS_DB, check_same_thread=False)
+    # BOSS 26/10 : PostgreSQL durable si DATABASE_URL (Railway), sinon
+    # SQLite (tests/dev). Toutes les tables survivent aux redéploiements.
+    import db_adapter
+    DB_CONN = db_adapter.connect(str(ACTIONS_DB), logger=logger)
     with DB_LOCK:
         DB_CONN.executescript("""
             CREATE TABLE IF NOT EXISTS flows (

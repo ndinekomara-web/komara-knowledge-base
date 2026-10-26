@@ -18,3 +18,4 @@ sentence-transformers
 
 # Sécurité image (Boss 09/10) : détecteur local de nudité
 nudenet
+psycopg2-binary==2.9.10

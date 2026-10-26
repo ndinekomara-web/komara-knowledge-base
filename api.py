@@ -168,6 +168,76 @@ def home():
     )
 
 
+# ---------------------------------------------------------------------------
+# TABLEAU DE BORD ADMIN (Boss 26/10) : TOUTES les fonctionnalités du bot
+# sur une seule page — /admin?key=<ADMIN_KEY> (MONITOR_API_KEY/KOMARA_API_KEY)
+# ---------------------------------------------------------------------------
+@app.get("/admin")
+def admin_dashboard():
+    if API_KEY and request.args.get("key", "") != API_KEY:
+        return jsonify({"error": "Clé admin manquante ou invalide."}), 401
+    # Stats base durable (PostgreSQL Railway ou SQLite worker)
+    db_stats, db_err = {}, ""
+    try:
+        import db_adapter
+        _db = db_adapter.Database("/tmp/admin_probe.db", logger=app.logger)
+        db_stats = _db.stats()
+        _db.close()
+    except Exception as exc:
+        db_err = str(exc)[:160]
+    # Base de connaissances chargée par l'API
+    kb_count = len(KNOWLEDGE)
+    faq_count = len(LOCAL_FAQ)
+    # Heartbeat worker
+    hb = "inconnu"
+    if WORKER_LAST_HEARTBEAT:
+        age = time.time() - float(WORKER_LAST_HEARTBEAT.get("timestamp", 0))
+        hb = f"vivant ({age:.0f}s)" if age <= HEARTBEAT_TIMEOUT else f"STALE ({age:.0f}s)"
+    rows_html = "".join(
+        f"<tr><td>{k}</td><td class='v'>{v}</td></tr>"
+        for k, v in {
+            "Backend BD": db_stats.get("backend", "?"),
+            "pgvector": "✅ actif" if db_stats.get("pgvector") else "— (RAG lexical en service)",
+            "Mémoire (chats)": db_stats.get("memory", "?"),
+            "Clients": db_stats.get("clients", "?"),
+            "Leads": db_stats.get("leads", "?"),
+            "Événements traités": db_stats.get("processed", "?"),
+            "— dont terminés": db_stats.get("processed_done", "?"),
+            "— dont échecs (retentés)": db_stats.get("processed_failed", "?"),
+            "Fiches KB (API)": kb_count,
+            "FAQ locales": faq_count,
+            "Worker Telegram": hb,
+        }.items())
+    cmds = [
+        ("Pilotage", "/bot_pilote — référence des 28 commandes ; /pause, /resume"),
+        ("Mémoire", "/apprends Q || R ; /apprends_logique Q || A1 || A2 ; /evaluation ; /prixaudit ; /oublie"),
+        ("Ventes", "/prend <chat> — prendre la main ; /devis ; /rdv ; codes promo ; catalogue"),
+        ("Clients", "Leads auto-transférés (closing) ; photos clients copiées ; commandes"),
+        ("Système", "healthcheck /health ; worker /worker-health ; heartbeat interne"),
+    ]
+    cmds_html = "".join(
+        f"<div class='cmd'><b>{t}</b><br>{d}</div>" for t, d in cmds)
+    err_html = f"<p class='err'>Stats BD : {db_err}</p>" if db_err else ""
+    return (
+        "<!doctype html><html><head><meta charset='utf-8'>"
+        "<meta name='viewport' content='width=device-width,initial-scale=1'>"
+        "<title>Komara Admin</title><style>"
+        "body{background:#0A0A0A;color:#E8C68A;font-family:system-ui,sans-serif;"
+        "max-width:860px;margin:24px auto;padding:0 16px}"
+        "h1{color:#D4AF37;border-bottom:2px solid #D4AF37;padding-bottom:8px}"
+        "table{width:100%;border-collapse:collapse;margin:12px 0}"
+        "td{padding:7px 10px;border-bottom:1px solid #26221a;color:#C49B3F}"
+        "td.v{color:#f0d264;text-align:right;font-weight:600}"
+        ".cmd{background:#151210;border:1px solid #2a2418;border-radius:10px;"
+        "padding:12px 14px;margin:8px 0}"
+        ".err{color:#e06c5a}"
+        "</style></head><body>"
+        "<h1>👑 Komara Agency — Tableau de bord</h1>"
+        f"{err_html}<table>{rows_html}</table>"
+        "<h2>Commandes admin</h2>" + cmds_html +
+        "</body></html>")
+
+
 @app.get("/health")
 def health():
     return jsonify({"status": "ok", "knowledge_entries": len(KNOWLEDGE), "faq_entries": len(LOCAL_FAQ)})

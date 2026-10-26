@@ -123,8 +123,12 @@ def _send_message_merge_offhours(chat_id, text=None, *args, **kwargs):
     if notice and isinstance(text, str) and text:
         text = f"{notice}\n\n{text}"
     # Anti-répétition : identique + invite de choix -> rappel court
+    # SAUF les re-salutations (Boss 26/10, screen 21:45) : 3x « Bonjour »
+    # doit donner 3x le MÊME ack — pas « on reste sur le même choix ».
     key = str(chat_id)
-    if (isinstance(text, str) and len(text) >= 60
+    _re_greet = ("Content de te revoir" in text or "On est déjà connectés" in text
+                 or "أنا هنا بالفعل" in text or "سعيد برؤيتك" in text) if isinstance(text, str) else False
+    if (isinstance(text, str) and len(text) >= 60 and not _re_greet
             and _LAST_SENT.get(key) == text and _has_choice_invite(text)):
         lang = "ar" if any("\u0600" <= c <= "\u06ff" for c in text) else "fr"
         text = _NUDGE.get(lang, _NUDGE["fr"])
@@ -675,7 +679,12 @@ def init_memory_db() -> None:
         logger.error("Chargement des sources knowledge impossible : %s", e)
     global DB_CONN
     MEMORY_DIR.mkdir(parents=True, exist_ok=True)
-    DB_CONN = sqlite3.connect(MEMORY_FILE, check_same_thread=False)
+    # BOSS 26/10 : PostgreSQL durable si DATABASE_URL (Railway) — la
+    # mémoire, les clients et l'anti-doublon SURVIVENT aux redéploiements
+    # (l'ancien /tmp était RASÉ à chaque déploiement Railway). Sinon
+    # SQLite (tests/dev sandbox), comportement inchangé.
+    import db_adapter
+    DB_CONN = db_adapter.connect(str(MEMORY_FILE), logger=logger)
     with DB_LOCK:
         DB_CONN.execute("""
             CREATE TABLE IF NOT EXISTS memory (
@@ -2893,6 +2902,11 @@ def run() -> None:
         BRAND, ", ".join(get_supported_languages()), POLL_TIMEOUT, LONG_POLLING_TIMEOUT, DROP_PENDING_UPDATES
     )
 
+    # BOSS 26/10 (screens 13:15) : les ReadTimeout api.telegram.org ne
+    # doivent PLUS JAMAIS tuer le worker. Superviseur absolu : toute
+    # exception (réseau, lib, imprévu) -> backoff -> relance. Le process
+    # ne sort QUE sur arrêt explicite (SIGTERM Railway).
+    _supervisor_gen = 0
     while not _shutdown_requested:
         try:
             prepare_polling()
@@ -2919,7 +2933,11 @@ def run() -> None:
                         "Conflit Telegram 409 persistant après %s tentatives. Arrêt.",
                         conflict_count - 1,
                     )
-                    raise SystemExit(2) from error
+                    # BOSS 26/10 : on ne meurt plus jamais sur un conflit
+                    # de redéploiement — on patiente jusqu'à la victoire.
+                    conflict_count = 0
+                    time.sleep(60)
+                    continue
                 delay = min(120, CONFLICT_BASE_DELAY * conflict_count)
                 logger.warning(
                     "Conflit Telegram 409 (tentative %s/%s) : reprise dans %ss.",
@@ -2930,10 +2948,7 @@ def run() -> None:
 
             conflict_count = 0
             retry_count += 1
-            if retry_count > MAX_RETRIES:
-                logger.critical("Trop d'erreurs Telegram consécutives ; arrêt du worker.")
-                raise
-            delay = min(60, 2 ** min(retry_count, 6))
+            delay = min(300, 2 ** min(retry_count, 8))
             logger.exception(
                 "Erreur Telegram transitoire (tentative %s/%s) ; reprise dans %ss.",
                 retry_count, MAX_RETRIES, delay,
@@ -2941,14 +2956,16 @@ def run() -> None:
             time.sleep(delay)
 
         except Exception:
+            # BOSS 26/10 : PLUS JAMAIS DE RAISE. Le bot ne meurt pas :
+            # backoff jusqu'à 5 min, puis relance. Railway ne redémarre
+            # le process QUE sur arrêt explicite (SIGTERM).
             retry_count += 1
-            if retry_count > MAX_RETRIES:
-                logger.critical("Trop d'erreurs consécutives ; arrêt du worker.")
-                raise
-            delay = min(60, 2 ** min(retry_count, 6))
+            _supervisor_gen += 1
+            delay = min(300, 2 ** min(retry_count, 8))
             logger.exception(
-                "Erreur inattendue du polling (tentative %s/%s) ; reprise dans %ss.",
-                retry_count, MAX_RETRIES, delay,
+                "Erreur inattendue du polling (cycle %s, tentative %s) ; "
+                "reprise dans %ss — le bot ne meurt PAS.",
+                _supervisor_gen, retry_count, delay,
             )
             time.sleep(delay)
 

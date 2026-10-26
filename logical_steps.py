@@ -29,24 +29,36 @@ TAB_HEADERS_LOGIQUE = ["Départ", "Suite", "Date", "Admin"]
 
 # Sortie de secours : le client a confirmé mais aucune suite n'est
 # enseignée et le matching ne trouve rien -> contact direct + devis/rdv.
+# BOSS 26/10 (screen 21:44) : « Oui » d'un client doit rester DANS le bot
+# (RAG + tunnels) — la sortie WhatsApp direct n'est plus la réponse par
+# défaut, elle reste une OPTION en bas si le client préfère l'humain.
 _ESCALATION = {
     "fr": (
-        "Parfait, on passe en direct bro 🚀\n\n"
-        "📲 WhatsApp Direct N-Dine : +212 701 986 219\n"
-        "👉 Clique ici pour chatter : wa.me/212701986219\n\n"
-        "Tu peux aussi taper 'devis' (prix express) ou 'rdv' (appel 15 min)."
+        "Parfait, on continue ici 🚀\n\n"
+        "Dis-moi juste ce que tu veux créer :\n"
+        "1️⃣ un bot / une IA\n"
+        "2️⃣ un site web\n"
+        "3️⃣ un logo ou un visuel\n\n"
+        "Ou tape 'devis' (prix express) ou 'rdv' (appel 15 min).\n"
+        "📲 Et si tu préfères l'humain : +212 701 986 219"
     ),
     "en": (
-        "Let's go direct 🚀\n\n"
-        "📲 WhatsApp N-Dine: +212 701 986 219\n"
-        "👉 Chat here: wa.me/212701986219\n\n"
-        "You can also type 'quote' (express price) or 'rdv' (15-min call)."
+        "Perfect, we continue right here 🚀\n\n"
+        "Just tell me what you want to create:\n"
+        "1️⃣ a bot / an AI\n"
+        "2️⃣ a website\n"
+        "3️⃣ a logo or a visual\n\n"
+        "Or type 'quote' (express price) or 'rdv' (15-min call).\n"
+        "📲 Prefer a human? +212 701 986 219"
     ),
     "es": (
-        "Vamos en directo 🚀\n\n"
-        "📲 WhatsApp de N-Dine: +212 701 986 219\n"
-        "👉 Chatea aquí: wa.me/212701986219\n\n"
-        "También puedes escribir 'presupuesto' o 'rdv' (llamada 15 min)."
+        "Perfecto, seguimos aquí 🚀\n\n"
+        "Dime solo qué quieres crear:\n"
+        "1️⃣ un bot / una IA\n"
+        "2️⃣ un sitio web\n"
+        "3️⃣ un logo o un visual\n\n"
+        "O escribe 'presupuesto' o 'rdv' (llamada 15 min).\n"
+        "📲 ¿Prefieres un humano? +212 701 986 219"
     ),
 }
 
